@@ -6,3 +6,6 @@ Coursework 1
 The rewiring applies only to excitatory-to-excitatory connections (as per the table in Topic 9). Connections to or from inhibitory neurons are not affected by the rewiring.
 
 The firing rate should be calculated in spikes per module per millisecond
+
+Indeed, in the lectures we studied a network where the rewires are forced to go to a different module. In practice, I don't expect it to make much of a difference for a range of p values.
+no self connection
