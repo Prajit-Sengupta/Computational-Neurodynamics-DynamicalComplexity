@@ -1,5 +1,5 @@
 import numpy as np
-from .iznetwork import IzNetwork
+from .Izhikevich_neuron import IzNetwork
 
 class ModularNetwork(IzNetwork):
     """
@@ -49,6 +49,7 @@ class ModularNetwork(IzNetwork):
                 src = np.random.randint(start_idx, end_idx)
                 dest = np.random.randint(start_idx, end_idx)
                 self._W[src, dest] = 1.0  # Assign a weight of 1 for excitatory-to-excitatory connections
+                # Add a Self Connection rectrict condition [!Action Required]
 
         # Add inhibitory connections
         used_excitatory_indices = set()
@@ -120,3 +121,13 @@ class ModularNetwork(IzNetwork):
             fired_indices = self.update()
             firings.append((t, fired_indices))
         return firings
+
+#[Action Required]
+'''
+1. External continoius Noise - Activation 
+2. Scaling Factor and Weights (Random range wrong), Delays
+3. Average Firing Rate
+4. Correct Rewiring Concept, Check Connections
+5. Chcek graphs matching with slides (create)
+
+'''
