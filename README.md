@@ -9,3 +9,5 @@ The firing rate should be calculated in spikes per module per millisecond
 
 Indeed, in the lectures we studied a network where the rewires are forced to go to a different module. In practice, I don't expect it to make much of a difference for a range of p values.
 no self connection
+
+It's not necessary to include the inhibitory neurons in the raster plot. In general, try to reproduce the plots as in the lecture slides as much as possible.
