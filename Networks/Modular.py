@@ -46,7 +46,7 @@ class ModularNetwork(IzNetwork):
         # Divide the network into modules and create connections within each module
         n_modules = 8
         neurons_per_module = self.N_excitatory // n_modules  #100
-        count =0
+    
         for module_index in range(n_modules):
             # Determine the range of neurons for this module
             start_index = module_index * neurons_per_module
@@ -60,8 +60,6 @@ class ModularNetwork(IzNetwork):
                     dest = np.random.randint(start_index, end_index)         #For avoiding Self connection
                 self._W[src, dest] = 1.0 * 17.0         #Weight+ Scaled Matrix
                 self._D[src, dest] = np.random.randint(1,21)  #Delay Matrix
-                count += 1
-        print(count)
         
         # Add inhibitory connections
         used_excitatory_neurons = set()
@@ -140,14 +138,32 @@ class ModularNetwork(IzNetwork):
         """
         Set parameters for the excitatory and inhibitory neurons based on Izhikevich's model.
         """
-        # Set different parameters for excitatory and inhibitory populations
-        a = np.array([0.02] * self.N_excitatory + [0.02] * self.N_inhibitory)
-        b = np.array([0.2] * self.N_excitatory + [0.25] * self.N_inhibitory)
-        c = np.array([-65.0] * self.N_excitatory + [-65.0] * self.N_inhibitory)
-        d = np.array([8.0] * self.N_excitatory + [2.0] * self.N_inhibitory)
         
+        
+        a = np.zeros(self.N_excitatory + self.N_inhibitory)
+        b = np.zeros(self.N_excitatory + self.N_inhibitory)
+        c = np.zeros(self.N_excitatory + self.N_inhibitory)
+        d = np.zeros(self.N_excitatory + self.N_inhibitory)
+
+        # Set parameters with r-dependent logic for excitatory and inhibitory neurons
+        for i in range(self.N_excitatory + self.N_inhibitory):
+            r = np.random.uniform(0,1)
+            if i < self.N_excitatory:
+                # Excitatory neuron parameters
+                a[i] = 0.02
+                b[i] = 0.2
+                c[i] = -65 + 15 * (r ** 2)
+                d[i] = 8 - 6 * (r ** 2)
+            else:
+                # Inhibitory neuron parameters
+                a[i] = 0.02 + 0.08 * r
+                b[i] = 0.25 - 0.05 * r
+                c[i] = -65
+                d[i] = 2
+
         # Use the parent class method to set the parameters
         self.setParameters(a, b, c, d)
+  
 
 
     def run_simulation(self, duration_ms,p):
@@ -181,19 +197,27 @@ class ModularNetwork(IzNetwork):
             firings.append((t, fired_indices))
         return firings
     
-    def plot_connectivity_matrix(self):
+    def plot_connectivity_matrix(self,p):
         """
         Generate a plot of the matrix connectivity.
         """
-        plt.figure(figsize=(10, 8))
-        plt.imshow(self._W, cmap='binary', interpolation='nearest')
-        plt.colorbar(label='Connection Weight')
-        plt.xlabel('Neuron Index')
-        plt.ylabel('Neuron Index')
-        plt.title('Connectivity Matrix of the Modular Network')
+
+        # Create a mask: 0 where weights are 0, 1 where weights are non-zero
+        mask = np.where(self._W == 0, 1, 0)
+
+        # Create the plot
+    
+        plt.imshow(mask, cmap="gray", interpolation='nearest')
+        plt.title('Connectivity Matrix of the Modular Network of p={}'.format(p))
+        plt.xlabel('Target Neuron')
+        plt.ylabel('Source Neuron')
+        plt.xlim(0,800)
+        plt.ylim(800,0)
+        plt.savefig('Connectivity Matrix_p={}.pdf'.format(p), format='pdf')
         plt.show()
 
-    def plot_raster(self, firings):
+
+    def plot_raster(self, firings, p):
         """
         Generate a raster plot of the neuron firing in a 1000ms run.
 
@@ -213,26 +237,28 @@ class ModularNetwork(IzNetwork):
             times_exc.extend([t] * len(excitatory_fired))
             neurons_exc.extend(excitatory_fired)
             
-            times_inh.extend([t] * len(inhibitory_fired))
-            neurons_inh.extend(inhibitory_fired)
+            # times_inh.extend([t] * len(inhibitory_fired))
+            # neurons_inh.extend(inhibitory_fired)
 
         plt.figure(figsize=(12, 3))
 
         # Plot excitatory neurons in blue
-        plt.scatter(times_exc, neurons_exc, s=20, c='blue', label='Excitatory Neurons')
+        plt.scatter(times_exc, neurons_exc, s=16, c='blue', label='Excitatory Neurons')
 
         # # Plot inhibitory neurons in red
         # plt.scatter(times_inh, neurons_inh, s=5, c='red', label='Inhibitory Neurons')
 
         plt.xlabel('Time (ms)')
         plt.ylabel('Neuron Index')
-        plt.title('Raster Plot of Neuron Firing')
+        plt.title('Raster Plot of Neuron Firing of p={}'.format(p))
         plt.legend(loc='upper right')
         plt.tight_layout()
+        # plt.ylim(800,0)
+        plt.savefig('Raster_p={}.pdf'.format(p), format='pdf')
         plt.show()
 
 
-    def plot_mean_firing_rate(self, firings, T, modules_to_plot=8, window_size=50, shift=20):
+    def plot_mean_firing_rate(self, firings, T,p, modules_to_plot=8, window_size=50, shift=20):
         """
         Plot the mean firing rate for each module over time.
 
@@ -274,16 +300,20 @@ class ModularNetwork(IzNetwork):
         
         plt.xlabel('Time (ms)')
         plt.ylabel('Mean Firing Rate')
-        plt.title('Mean Firing Rate per Module Over Time')
+        plt.title('Mean Firing Rate per Module Over Time of p={}'.format(p))
         plt.legend()
         plt.tight_layout()
+        plt.savefig('Firing_Rate_p={}.pdf'.format(p), format='pdf')
         plt.show()
-
     
 
 if __name__ == "__main__":
         network = ModularNetwork()
-        firings = network.run_simulation(1000,0)
-        network.plot_raster(firings)
-        network.plot_mean_firing_rate(firings, 1000)
-        network.plot_connectivity_matrix()
+        p=[0.4]
+        for i in p:
+            firings = network.run_simulation(1000,i)
+            network.plot_raster(firings,i)
+            network.plot_mean_firing_rate(firings, 1000,i)
+            network.plot_connectivity_matrix(i)
+            
+            
