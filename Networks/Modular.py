@@ -12,11 +12,10 @@ class ModularNetwork(IzNetwork):
     def __init__(self, N_excitatory=800, N_inhibitory=200, Dmax=20):
         """
         Initialize the ModularNetwork with given parameters.
-
         Parameters:
         - N_excitatory: Number of excitatory neurons in the network (default: 800).
         - N_inhibitory: Number of inhibitory neurons in the network (default: 200).
-        - Dmax: Maximum conduction delay in milliseconds (default: 20).
+        - Dmax: Maximum conduction delay in milliseconds (default: 20). 
         """
         # Call the parent constructor to initialize common attributes
         super().__init__(N_excitatory + N_inhibitory, Dmax)
@@ -32,7 +31,7 @@ class ModularNetwork(IzNetwork):
 
     def create_initial_connections(self):
         """
-        Create the initial connectivity matrix for the modular network.
+        This is initial connectivity matrix for the modular network.
         The network consists of multiple modules, each with excitatory and inhibitory neurons.
         (Before Rewiring)
         """
@@ -42,7 +41,6 @@ class ModularNetwork(IzNetwork):
         #Intialize Delay Matrix
         self._D = np.ones((self._N, self._N), dtype = int)
 
-        
         # Divide the network into modules and create connections within each module
         n_modules = 8
         neurons_per_module = self.N_excitatory // n_modules  #100
@@ -57,11 +55,11 @@ class ModularNetwork(IzNetwork):
                 src = np.random.randint(start_index, end_index)
                 dest = np.random.randint(start_index, end_index)
                 while src == dest: 
-                    dest = np.random.randint(start_index, end_index)         #For avoiding Self connection
-                self._W[src, dest] = 1.0 * 17.0         #Weight+ Scaled Matrix
+                    dest = np.random.randint(start_index, end_index)      #For avoiding Self connection
+                self._W[src, dest] = 1.0 * 17.0         #Scaled Weight as per the table
                 self._D[src, dest] = np.random.randint(1,21)  #Delay Matrix
         
-        # Add inhibitory connections
+        # Add excitatory to inhibitory connections
         used_excitatory_neurons = set()
         for i in range(self.N_excitatory, self._N):
             # Each inhibitory neuron receives connections from exactly four excitatory neurons (within a module)
@@ -75,22 +73,20 @@ class ModularNetwork(IzNetwork):
                     excitatory_indices.add(candidate)
                     used_excitatory_neurons.add(candidate)
             for src in excitatory_indices:
-                self._W[src, i] = np.random.uniform(0, 1.0) * 50.0  #Scaled Weight
+                self._W[src, i] = np.random.uniform(0, 1.0) * 50.0  #Scaled Weight as per the table
             
             
-            # Each inhibitory neuron projects to all other neurons (diffuse inhibition)
+        # Each inhibitory neuron projects to all other neurons 
         for i in range(self.N_excitatory, self._N):
             for e in range(self.N_excitatory):
-                self._W[i, e] = np.random.uniform(-1.0, 0.0) * 2.0   #Scaled Wt
+                self._W[i, e] = np.random.uniform(-1.0, 0.0) * 2.0   #Scaled Weight as per the table
             for n in range(self.N_excitatory, self._N):
-                self._W[i,n] = np.random.uniform(-1.0, 0.0) * 1.0   
+                self._W[i,n] = np.random.uniform(-1.0, 0.0) * 1.0   #Scaled Weight as per the table
         
     
-
     def rewire_network(self, p):
         """
         Rewire the network connections with a given rewiring probability p.
-
         Parameters:
         - p: Probability of rewiring each connection.
         """
@@ -118,7 +114,6 @@ class ModularNetwork(IzNetwork):
                                 target_start = target_module_index * neurons_per_module
                                 target_end = target_start + neurons_per_module
                                 new_dest = np.random.randint(target_start, target_end)
-                                
                                 # Check if there is no existing connection between the selected source and target neurons
                                 if rewired_W[i, new_dest] == 0:
                                     # Rewire the connection
@@ -128,24 +123,20 @@ class ModularNetwork(IzNetwork):
                                     rewired_W[i, j] = 0
                                     rewired_D[i, j] = 1
                                     rewired = True
-        
         # Update the network with rewired connections
         self._W = rewired_W
         self._D = rewired_D
-
 
     def set_neuron_parameters(self):
         """
         Set parameters for the excitatory and inhibitory neurons based on Izhikevich's model.
         """
-        
-        
         a = np.zeros(self.N_excitatory + self.N_inhibitory)
         b = np.zeros(self.N_excitatory + self.N_inhibitory)
         c = np.zeros(self.N_excitatory + self.N_inhibitory)
         d = np.zeros(self.N_excitatory + self.N_inhibitory)
 
-        # Set parameters with r-dependent logic for excitatory and inhibitory neurons
+        # Set parameters for excitatory and inhibitory neurons
         for i in range(self.N_excitatory + self.N_inhibitory):
             r = np.random.uniform(0,1)
             if i < self.N_excitatory:
@@ -161,22 +152,20 @@ class ModularNetwork(IzNetwork):
                 c[i] = -65
                 d[i] = 2
 
-        # Use the parent class method to set the parameters
         self.setParameters(a, b, c, d)
   
 
-
-    def run_simulation(self, duration_ms,p):
+    def run_simulation(self, duration_ms, p):
         """
         Run the simulation for the specified duration in milliseconds.
 
         Parameters:
         - duration_ms: Duration of the simulation in milliseconds.
         """
-
         if p is not None:
             self.rewire_network(p)
             
+        #Add Transient Time to improve the results of the Neurone Spikes 
         transient_time = 100
         for t in range(transient_time):
         # Add background firing using Poisson process
@@ -184,7 +173,6 @@ class ModularNetwork(IzNetwork):
             self.setCurrent(poisson_vals)
             # Update the network state without collecting data
             self.update()
-
         firings = []
         for t in range(duration_ms):
             # Add background firing using Poisson process
@@ -201,59 +189,42 @@ class ModularNetwork(IzNetwork):
         """
         Generate a plot of the matrix connectivity.
         """
-
         # Create a mask: 0 where weights are 0, 1 where weights are non-zero
         mask = np.where(self._W == 0, 1, 0)
-
         # Create the plot
-    
         plt.imshow(mask, cmap="gray", interpolation='nearest')
         plt.title('Connectivity Matrix of the Modular Network of p={}'.format(p))
         plt.xlabel('Target Neuron')
         plt.ylabel('Source Neuron')
         plt.xlim(0,800)
         plt.ylim(800,0)
-        plt.savefig('Connectivity Matrix_p={}.pdf'.format(p), format='pdf')
+        plt.savefig('Connectivity Matrix_p={}.pdf'.format(p), format='pdf')     #For Saving the Plot
         plt.show()
 
 
     def plot_raster(self, firings, p):
         """
         Generate a raster plot of the neuron firing in a 1000ms run.
-
         Parameters:
         - firings: List of tuples containing (time, fired_indices) pairs.
         """
         times_exc = []
         neurons_exc = []
-        times_inh = []
-        neurons_inh = []
 
         for t, fired_indices in firings:
-            # Separate excitatory and inhibitory neurons
             excitatory_fired = [neuron for neuron in fired_indices if neuron < self.N_excitatory]
-            inhibitory_fired = [neuron for neuron in fired_indices if neuron >= self.N_excitatory]
-            
             times_exc.extend([t] * len(excitatory_fired))
             neurons_exc.extend(excitatory_fired)
-            
-            # times_inh.extend([t] * len(inhibitory_fired))
-            # neurons_inh.extend(inhibitory_fired)
-
         plt.figure(figsize=(12, 3))
 
-        # Plot excitatory neurons in blue
+        # Excitatory neurons
         plt.scatter(times_exc, neurons_exc, s=16, c='blue', label='Excitatory Neurons')
-
-        # # Plot inhibitory neurons in red
-        # plt.scatter(times_inh, neurons_inh, s=5, c='red', label='Inhibitory Neurons')
 
         plt.xlabel('Time (ms)')
         plt.ylabel('Neuron Index')
         plt.title('Raster Plot of Neuron Firing of p={}'.format(p))
         plt.legend(loc='upper right')
         plt.tight_layout()
-        # plt.ylim(800,0)
         plt.savefig('Raster_p={}.pdf'.format(p), format='pdf')
         plt.show()
 
@@ -261,12 +232,11 @@ class ModularNetwork(IzNetwork):
     def plot_mean_firing_rate(self, firings, T,p, modules_to_plot=8, window_size=50, shift=20):
         """
         Plot the mean firing rate for each module over time.
-
         Parameters:
         - firings: List of tuples (time, neuron_indices) from run_simulation()
         - T: Total simulation time (in ms)
         - modules_to_plot: Number of modules to plot (default: 8)
-        - window_size: Window size for calculating mean firing rate (default: 50 ms)
+        - window_size: Window size for calculating mean firing rate (default: 50 ms) 
         - shift: Step size for sliding window (default: 20 ms)
         """
         # Initialize firing count per module
@@ -303,10 +273,11 @@ class ModularNetwork(IzNetwork):
         plt.title('Mean Firing Rate per Module Over Time of p={}'.format(p))
         plt.legend()
         plt.tight_layout()
-        plt.savefig('Firing_Rate_p={}.pdf'.format(p), format='pdf')
+        plt.savefig('Firing_Rate_p={}.pdf'.format(p), format='pdf')  
         plt.show()
     
 
+#For Running this function
 if __name__ == "__main__":
         network = ModularNetwork()
         p=[0.4]
@@ -315,5 +286,3 @@ if __name__ == "__main__":
             network.plot_raster(firings,i)
             network.plot_mean_firing_rate(firings, 1000,i)
             network.plot_connectivity_matrix(i)
-            
-            
