@@ -1,5 +1,5 @@
 import numpy as np
-from Networks.Izhikevich_neuron import IzNetwork
+from .Izhikevich_neuron import IzNetwork   #From Default Path
 import matplotlib.pyplot as plt
 
 class ModularNetwork(IzNetwork):
